@@ -66,5 +66,12 @@ export async function analyzeThoughtAndRecommendPoetry(thought: string) {
     }
   });
 
-  return JSON.parse(result.text);
+  try {
+    const text = result.text;
+    if (!text) throw new Error("AI 未返回有效内容");
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("JSON Parse Error:", e, result.text);
+    throw new Error("诗词解析失败，请尝试重新输入感悟。");
+  }
 }

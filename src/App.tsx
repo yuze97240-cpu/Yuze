@@ -14,7 +14,8 @@ import {
   serverTimestamp,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  getDocs
 } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { db, auth, googleProvider } from './lib/firebase';
@@ -99,6 +100,22 @@ export default function App() {
   };
   const handleLogout = () => signOut(auth);
 
+  const handleHistoryItemClick = async (item: Thought) => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'thoughts', item.id, 'matches'));
+      const matches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PoetryMatch));
+      
+      setCurrentResult({
+        thought: item,
+        recommendations: matches
+      });
+      setView('result');
+    } catch (error) {
+      console.error("Failed to fetch matches:", error);
+      alert("无法加载匹配记录，请稍后重试。");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!input.trim() || !user) return;
 
@@ -106,17 +123,21 @@ export default function App() {
     try {
       const analysis = await analyzeThoughtAndRecommendPoetry(input);
       
+      if (!analysis || !analysis.recommendations) {
+        throw new Error("AI 返回数据格式错误，请稍后重试。");
+      }
+
       const thoughtData: Partial<Thought> = {
         userId: user.uid,
         content: input,
-        sentiment: analysis.sentiment,
-        imagery: analysis.imagery,
+        sentiment: analysis.sentiment || "感悟",
+        imagery: analysis.imagery || [],
         createdAt: serverTimestamp()
       };
 
       const thoughtRef = await addDoc(collection(db, 'thoughts'), thoughtData);
       
-      const matches: PoetryMatch[] = analysis.recommendations.map((rec: any) => ({
+      const matches: PoetryMatch[] = (analysis.recommendations || []).map((rec: any) => ({
         thoughtId: thoughtRef.id,
         ...rec,
         createdAt: serverTimestamp()
@@ -132,8 +153,9 @@ export default function App() {
       });
       setView('result');
       setInput('');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to analyze sentiment", error);
+      alert(`分析失败: ${error.message || "请检查您的网络连接或 API 配置。"}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -357,7 +379,7 @@ export default function App() {
                   “{currentResult.thought.content}”
                 </p>
                 <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
-                  {currentResult.thought.imagery.map((tag, i) => (
+                  {(currentResult.thought.imagery || []).map((tag, i) => (
                     <span key={i} className="px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-xs font-semibold">#{tag}</span>
                   ))}
                 </div>
@@ -390,7 +412,7 @@ export default function App() {
                   <div className="mt-12">
                     <div className="text-xs text-indigo-300 mb-6 uppercase tracking-widest">提取核心意象：</div>
                     <div className="flex flex-wrap gap-6">
-                      {currentResult.thought.imagery.slice(0, 3).map((tag, i) => (
+                      {(currentResult.thought.imagery || []).slice(0, 3).map((tag, i) => (
                         <div key={i} className="flex flex-col items-center">
                           <div className="w-14 h-14 rounded-full border border-indigo-500 flex items-center justify-center mb-3 italic text-xl font-serif text-white bg-indigo-800 shadow-inner">
                             {tag.charAt(0)}
@@ -458,7 +480,7 @@ export default function App() {
               <div className="md:col-span-3 md:row-span-3 bento-card p-8 flex flex-col">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Secondary Matches</span>
                 <div className="space-y-6 flex-grow">
-                  {currentResult.recommendations.slice(1).map((poem, i) => (
+                  {(currentResult.recommendations || []).slice(1).map((poem, i) => (
                     <div key={i} className="pb-4 border-b border-slate-50 last:border-0 group cursor-pointer">
                       <div className="text-base font-serif font-bold text-slate-700 group-hover:text-indigo-600 transition-colors leading-tight">
                         “{poem.content.split(/[，。？！；\n]/)[0]}”
@@ -509,11 +531,7 @@ export default function App() {
                         "bento-card p-8 cursor-pointer hover:border-indigo-200 group flex flex-col justify-between",
                         i % 5 === 0 ? "md:col-span-8" : "md:col-span-4"
                       )}
-                      onClick={() => {
-                        // Prototype note: In a production app you'd load the full matches here
-                        // For this turn, we focus on the visual bento layout
-                         alert(`感悟：${item.content}\n\n情感：${item.sentiment}`);
-                      }}
+                      onClick={() => handleHistoryItemClick(item)}
                     >
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
