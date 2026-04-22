@@ -5,7 +5,16 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const getApiKey = () => {
+  const key = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
+  if (!key && typeof window !== 'undefined') {
+    console.warn("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+  }
+  return key || "";
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
 
 export async function analyzeThoughtAndRecommendPoetry(thought: string) {
   const result = await ai.models.generateContent({
