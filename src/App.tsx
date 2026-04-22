@@ -83,7 +83,20 @@ export default function App() {
     }
   }, [user, view]);
 
-  const handleLogin = () => signInWithPopup(auth, googleProvider);
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      if (error.code === 'auth/popup-blocked') {
+        alert("登录窗口被浏览器拦截，请允许弹出窗口并重试。");
+      } else if (error.code === 'auth/unauthorized-domain') {
+        alert("当前域名未在 Firebase 授权域名列表中。请在 Firebase 控制台的 Auth 设置中添加此域名。");
+      } else {
+        alert(`登录失败: ${error.message}`);
+      }
+    }
+  };
   const handleLogout = () => signOut(auth);
 
   const handleSubmit = async () => {
