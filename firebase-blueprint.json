@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Thought": {
+      "title": "Thought",
+      "description": "User's personal reflections or moods",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "sentiment": { "type": "string" },
+        "imagery": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "content", "createdAt"]
+    },
+    "PoetryMatch": {
+      "title": "Poetry Match",
+      "description": "A classic poem matched to a thought",
+      "type": "object",
+      "properties": {
+        "thoughtId": { "type": "string" },
+        "poetryTitle": { "type": "string" },
+        "author": { "type": "string" },
+        "dynasty": { "type": "string" },
+        "content": { "type": "string" },
+        "background": { "type": "string" },
+        "matchReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["thoughtId", "poetryTitle", "author", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Public user profiles"
+    },
+    "/thoughts/{thoughtId}": {
+      "schema": "Thought",
+      "description": "User thoughts and sentiments"
+    },
+    "/thoughts/{thoughtId}/matches/{matchId}": {
+      "schema": "PoetryMatch",
+      "description": "Poems matched to specific thoughts"
+    }
+  }
+}
